@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>입고/공정불량 입력 분석 관리 시스템</title>
+<style>
+:root{--navy:#172b4d;--blue:#2563eb;--bg:#f4f7fb;--line:#dce3ed;--muted:#64748b;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#172033;font-family:Arial,"Malgun Gothic",sans-serif}
+header{background:var(--navy);color:white;padding:24px max(20px,calc((100% - 1100px)/2))}
+header .eyebrow{font-size:12px;letter-spacing:1.5px;opacity:.75}header h1{font-size:25px;margin:8px 0}header p{margin:0;color:#d6deeb;font-size:14px}
+main{max-width:1100px;margin:24px auto;padding:0 18px 50px;display:grid;grid-template-columns:1.05fr .95fr;gap:18px}
+.card{background:var(--white);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:0 5px 18px #172b4d0a}
+.card h2{font-size:18px;margin:0 0 6px}.sub{font-size:13px;color:var(--muted);margin:0 0 18px}
+label{display:block;font-weight:700;font-size:13px;margin:14px 0 7px}
+input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:9px;padding:11px 12px;font:inherit;font-size:14px;background:#fff;color:#172033}
+textarea{min-height:100px;resize:vertical}
+input:focus,select:focus,textarea:focus{outline:2px solid #bfdbfe;border-color:var(--blue)}
+.results{display:grid;gap:9px;margin-top:12px}
+.product{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+.product:hover{border-color:#93b4f8;background:#f8fbff}.product.selected{border-color:var(--blue);background:#eff6ff}
+.product input{width:auto;margin-top:4px}.product strong{display:block;font-size:14px}.meta{font-size:12px;color:var(--muted);margin-top:5px;line-height:1.5}
+.pill{display:inline-block;border-radius:999px;padding:4px 8px;background:#eaf0f8;color:#42536c;font-size:11px;margin-bottom:10px}
+button{border:0;border-radius:10px;padding:12px 15px;font-weight:700;cursor:pointer;font-size:14px}
+.primary{background:var(--blue);color:white}.secondary{background:#e8eef7;color:#20324f}.btnrow{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px}.btnrow button{flex:1}
+.notice{font-size:12px;color:var(--muted);line-height:1.6;margin-top:12px}
+.output{margin-top:18px;border-top:1px solid var(--line);padding-top:18px}.output textarea{min-height:155px;background:#f8fafc}
+.empty{color:var(--muted);font-size:13px;padding:14px;border:1px dashed var(--line);border-radius:10px}
+.status{font-size:12px;color:#166534;margin-top:10px;min-height:16px}
+footer{max-width:1100px;margin:0 auto;padding:0 18px 25px;color:var(--muted);font-size:12px}
+@media(max-width:760px){main{grid-template-columns:1fr;margin-top:14px}header h1{font-size:21px}.card{padding:17px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">QUALITY MANAGEMENT · DEMO</div>
+  <h1>입고/공정불량 입력 분석 관리 시스템</h1>
+  <p>제품을 검색하고 불량 정보를 입력해 협력사 교체 요청 문구를 생성합니다.</p>
+</header>
+<main>
+  <section class="card">
+    <h2>01. 제품 검색 및 선택</h2>
+    <p class="sub">제품명, 제품코드, 업체명으로 검색하세요.</p>
+    <label for="search">제품 검색</label>
+    <input id="search" placeholder="예: 30 모듈, DA97-12345A, AAA업체" autocomplete="off">
+    <div id="count" class="notice">샘플 제품 5개</div>
+    <div id="results" class="results"></div>
+    <p class="notice">현재 표시된 제품은 예시 데이터입니다. 회사 BOM 파일은 아직 연결되어 있지 않습니다.</p>
+  </section>
+  <section class="card">
+    <h2>02. 불량 내용 입력</h2>
+    <p class="sub">선택한 제품의 불량 정보를 작성하세요.</p>
+    <div id="selectedBadge" class="pill">제품 미선택</div>
+    <div id="selectedInfo" class="empty">왼쪽 목록에서 제품을 선택해 주세요.</div>
+    <form id="defectForm">
+      <label for="defectType">불량 유형</label>
+      <select id="defectType" required>
+        <option value="">불량 유형 선택</option>
+        <option>외관불량</option><option>치수불량</option><option>조립불량</option>
+        <option>용접불량</option><option>누설/기능불량</option><option>오염/이물</option>
+        <option>파손</option><option>기타</option>
+      </select>
+      <label for="defectDetail">불량 상세 내용</label>
+      <textarea id="defectDetail" placeholder="예: 제품 모서리 찍힘 확인, 입고품 3개 발생" required></textarea>
+      <label for="quantity">불량 수량 (개)</label>
+      <input id="quantity" type="number" min="1" step="1" placeholder="예: 3" required>
+      <label for="requestType">요청 내용</label>
+      <select id="requestType">
+        <option>불량품 교체 요청</option><option>선별 및 대책 회신 요청</option><option>긴급 확인 요청</option>
+      </select>
+      <div class="btnrow">
+        <button class="primary" type="submit">요청 문구 생성</button>
+        <button class="secondary" type="button" id="reset">입력 초기화</button>
+      </div>
+    </form>
+    <div class="output">
+      <label for="message">카카오톡 전송용 문구</label>
+      <textarea id="message" placeholder="제품을 선택하고 불량 정보를 입력한 뒤 ‘요청 문구 생성’을 누르세요."></textarea>
+      <div class="btnrow"><button class="secondary" type="button" id="copy">문구 복사</button></div>
+      <div id="status" class="status" role="status"></div>
+    </div>
+    <p class="notice">시제품 안내: 현재 입력 내용은 서버나 관리대장에 저장되지 않습니다. 새로고침하면 초기화됩니다.</p>
+  </section>
+</main>
+<footer>시제품 v0.1 · 실제 업무 적용 전 회사 정보보안/IT 담당자의 검토가 필요합니다.</footer>
+<script>
+const products = [
+ {model:"30 모듈",name:"ASSY MAIN MODULE",code:"DA97-12345A",vendor:"AAA업체"},
+ {model:"30 모듈",name:"ASSY LAN MODULE",code:"DA97-23456A",vendor:"BBB업체"},
+ {model:"30 모듈",name:"SUB ASSY MODULE",code:"DA97-34567A",vendor:"CCC업체"},
+ {model:"31 모듈",name:"ASSY CONTROL MODULE",code:"DA97-45678A",vendor:"DDD업체"},
+ {model:"32 모듈",name:"ASSY DISPLAY MODULE",code:"DA97-56789A",vendor:"EEE업체"}
+];
+let selected = null;
+const $ = id => document.getElementById(id);
+function renderProducts(){
+ const q=$("search").value.trim().toLowerCase();
+ const found=products.filter(p=>[p.model,p.name,p.code,p.vendor].some(v=>v.toLowerCase().includes(q)));
+ $("count").textContent=`검색 결과 ${found.length}개 / 전체 ${products.length}개`;
+ const root=$("results"); root.innerHTML="";
+ if(!found.length){root.innerHTML='<div class="empty">검색 결과가 없습니다. 검색어를 확인해 주세요.</div>';return}
+ found.forEach(p=>{
+  const label=document.createElement("label");
+  label.className="product"+(selected&&selected.code===p.code?" selected":"");
+  label.innerHTML=`<input type="radio" name="product" ${selected&&selected.code===p.code?"checked":""}><span><strong>${p.name}</strong><span class="meta">${p.model} · ${p.code}<br>업체: ${p.vendor}</span></span>`;
+  label.addEventListener("click",()=>{selected=p;renderProducts();renderSelected()});
+  root.appendChild(label);
+ });
+}
+function renderSelected(){
+ if(!selected){$("selectedBadge").textContent="제품 미선택";$("selectedInfo").textContent="왼쪽 목록에서 제품을 선택해 주세요.";return}
+ $("selectedBadge").textContent="선택 완료";
+ $("selectedInfo").innerHTML=`<strong>${selected.name}</strong><div class="meta">모델: ${selected.model}<br>제품코드: ${selected.code}<br>업체명: ${selected.vendor}</div>`;
+}
+$("search").addEventListener("input",renderProducts);
+$("defectForm").addEventListener("submit",e=>{
+ e.preventDefault();
+ if(!selected){$("status").textContent="먼저 왼쪽 목록에서 제품을 선택해 주세요.";return}
+ const type=$("defectType").value, detail=$("defectDetail").value.trim(), qty=$("quantity").value, req=$("requestType").value;
+ const today=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit"});
+ $("message").value=`[${req}]\n\n안녕하세요. ${selected.vendor} 담당자님.\n\n아래 제품에서 불량이 확인되어 전달드립니다.\n- 발생일자: ${today}\n- 모델: ${selected.model}\n- 제품명: ${selected.name}\n- 제품코드: ${selected.code}\n- 불량 유형: ${type}\n- 불량 내용: ${detail}\n- 불량 수량: ${qty}개\n\n확인 후 ${req==="불량품 교체 요청"?"교체 일정 및 조치 결과":req==="선별 및 대책 회신 요청"?"선별 결과 및 개선대책":"확인 결과"} 회신 부탁드립니다.\n감사합니다.`;
+ $("status").textContent="요청 문구를 생성했습니다. 내용을 확인한 뒤 복사해 주세요.";
+});
+$("copy").addEventListener("click",async()=>{
+ const text=$("message").value;
+ if(!text){$("status").textContent="먼저 요청 문구를 생성해 주세요.";return}
+ try{await navigator.clipboard.writeText(text);$("status").textContent="문구를 클립보드에 복사했습니다."}
+ catch(e){$("message").select();document.execCommand("copy");$("status").textContent="문구를 선택했습니다. 복사가 안 되면 Ctrl+C를 눌러 주세요."}
+});
+$("reset").addEventListener("click",()=>{
+ $("defectForm").reset();$("message").value="";$("status").textContent="";
+});
+renderProducts();renderSelected();
+</script>
+</body>
+</html>
